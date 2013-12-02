@@ -28,5 +28,5 @@ $string['caserule'] = 'Check for case';
 $string['caserulenone'] = 'No case rule';
 $string['caserulesentence'] = 'Sentence case';
 $string['componentid'] = 'Component';
-$string['notsentencecase'] = 'This is not fully sentence case.';
+$string['notsentencecase'] = 'This is not fully sentence case. This could be caused by proper nouns or extra line breaks.';
 $string['nottitlecase'] = 'This is not fully title case.';
