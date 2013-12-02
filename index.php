@@ -10,7 +10,7 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_url('/local/validatelang/index.php');
 $PAGE->set_title($SITE->shortname);
 
-$PAGE->navbar->add(get_string('admin);
+$PAGE->navbar->add(get_string('admin');
 
 // This is hard-coded to a particular component for now - use DB to find it.
 $strings = $DB->get_records('tool_customlang', array('componentid' => 1));
