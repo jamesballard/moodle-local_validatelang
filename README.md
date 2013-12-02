@@ -10,11 +10,13 @@ This is a developer tool that will prints all language strings from a given comp
 
 ##Use
 
-1. Checkout the language strings via Site Administration -> Language -> Language Customisation (remember to update this after changes to revalidate)
+1. Checkout the language strings via Site Administration -> Language -> Language Customisation
 2. Edit local/validatelang/index.php to use the desired file
 3. Go to http://your/moodle/local/validatelang/
 4. Select the component and rule and submit (this will list all strings and an error if it doesn't match rule - this may be intentional)
 5. Use W3C local validation on the source code to check any HTML tags are correct
+
+NB: Remember to re-checkout the strings and clear cache after making changes before re-validating.
 
 ##Features
 
@@ -30,6 +32,8 @@ This is a developer tool that will prints all language strings from a given comp
 * Provide auto W3C validation of strings
 * Case match should use unicode and not ascii matching
 * New lines/paragraphs should be in capitals in sentence case
+* Dealing with abbreviations such as e.g. or incl. which are not followed by capital
+* Highlight errors (not a direct result of strcmp so needs assessment)
 
 ##Limitations
 
