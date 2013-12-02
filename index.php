@@ -34,8 +34,10 @@ if ($mform->is_cancelled()) {
         echo $langstring;
         switch ($fromform->caserule) {
             case $mform::CASE_RULE_SENTENCE:
-                $casedstring = local_validatelang_sentence_case($langstring, $string->lang);
-                $casecompare = strcmp($casedstring, $langstring);
+                $nohtmlstring = local_validatelang_strip_html_tags($langstring);
+                $casedstring = local_validatelang_sentence_case($nohtmlstring, $string->lang);
+                $stdstring = local_validatelang_standardise_breaks($nohtmlstring, $string->lang);
+                $casecompare = strcmp($casedstring, $stdstring);
                 if (!empty($casecompare)) {
                     echo html_writer::tag('p', get_string('notsentencecase', 'local_validatelang'),
                         array('class' => 'alert alert-error'));

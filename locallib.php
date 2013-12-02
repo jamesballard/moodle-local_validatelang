@@ -39,7 +39,7 @@ class local_validatelang_settings extends moodleform {
 
     // Define the form.
     public function definition() {
-        global $CFG, $DB;
+        global $DB;
         $mform =& $this->_form;
 
         $options = $DB->get_records_menu('tool_customlang_components', null, '', 'id, name');
@@ -63,24 +63,27 @@ class local_validatelang_settings extends moodleform {
     }
 }
 
+/*
+ * Changes a string to an approximate of sentence case.
+ *
+ * This will handle English personal pronoun 'I' and words all in capitals.
+ * However will not deal with proper nouns, which editor can decide how to handle in lnaguage file.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
 function local_validatelang_sentence_case($str, $lang) {
+    $capstr = local_validatelang_enclose_allcaps($str, $lang);
+    $capstr = local_validatelang_enclose_breaks($capstr, $lang);
+    $capstr = strtolower($capstr);
+    $capstr = local_validatelang_fix_standard_rules($capstr, $lang);
+
     $cap = true;
     $ret='';
-    $capstr = preg_replace_callback(
-        '/(\b[A-Z][A-Z]+\b)/',
-        create_function(
-            '$matches',
-            'return "#$matches[0]#";'
-        ),
-        $str
-    );
-    $capstr = strtolower($capstr);
-    if ($lang == 'en') {
-        $capstr = preg_replace("/\bi\b/", "I", $capstr);
-    }
     for ($x = 0; $x < strlen($capstr); $x++) {
         $letter = substr($capstr, $x, 1);
-        if ($letter == "." || $letter == "!" || $letter == "?") {
+        if (in_array($letter, array(".", "!", "?", "~"))) {
             $cap = true;
         } else if ($letter != " " && $cap == true) {
             $letter = strtoupper($letter);
@@ -88,13 +91,151 @@ function local_validatelang_sentence_case($str, $lang) {
         }
         $ret .= $letter;
     }
-    $ret = preg_replace_callback(
+    $ret = local_validatelang_restore_breaks($ret, $lang);
+    $ret = local_validatelang_restore_allcaps($ret, $lang);
+    return $ret;
+}
+
+/*
+ * Processes known and well-defined rules for a language.
+ *
+ * For example the first person pronoun in English must always be capitalised.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_fix_standard_rules($str, $lang) {
+    if ($lang == 'en') {
+        $str = preg_replace("/\bi\b/", "I", $str);
+    }
+    return $str;
+}
+
+/*
+ * Returns a string as an array of sentences.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_split_sentences($str, $lang) {
+    if ($lang == 'en') {
+        $sentences = preg_split('/([.?!]+)/', $str, -1, PREG_SPLIT_NO_EMPTY|PREG_SPLIT_DELIM_CAPTURE);
+    }
+    return $sentences;
+}
+
+/*
+ * Encloses line breaks as #BREAK-EOL# sign to identify them.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_enclose_breaks($str, $lang) {
+    return preg_replace_callback(
+        "/(\n+\r?)/",
+        create_function(
+            '$matches',
+            'return "#~";'
+        ),
+        $str
+    );
+}
+
+/*
+ * Restores any line breaks to end of line.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_restore_breaks($str, $lang) {
+    return preg_replace("/#~/", PHP_EOL, $str);
+}
+
+/*
+ * Standardises line breaks so that strings can compare.
+ *
+ * This does not alter the original string so is safe - we only want to apply a case rule to paragraphs.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_standardise_breaks($str, $lang) {
+    return preg_replace("/(\n+\r?)/", PHP_EOL, $str);
+}
+
+/*
+ * Encloses any words of lenght 2 or more characters within # sign to identify them.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_enclose_allcaps($str, $lang) {
+    return preg_replace_callback(
+        '/(\b[A-Z][A-Z]+\b)/',
+        create_function(
+            '$matches',
+            'return "#$matches[0]#";'
+        ),
+        $str
+    );
+}
+
+/*
+ * Restores any words enclosed within # signs to all capitals.
+ *
+ * @var string $str
+ * @var string $lang
+ * return string
+ */
+function local_validatelang_restore_allcaps($str, $lang) {
+    return preg_replace_callback(
         '/#(\b[a-z][a-z]+\b)#/',
         create_function(
             '$matches',
             'return strtoupper(str_replace("#", "", $matches[0]));'
         ),
-        $ret
+        $str
     );
-    return $ret;
+}
+
+/**
+ * Remove HTML tags, including invisible text such as style and
+ * script code, and embedded objects.  Add line breaks around
+ * block-level tags to prevent word joining after tag removal.
+ */
+function local_validatelang_strip_html_tags($text) {
+    $text = preg_replace(
+        array(
+            // Remove invisible content.
+            '@<head[^>]*?>.*?</head>@siu',
+            '@<style[^>]*?>.*?</style>@siu',
+            '@<script[^>]*?.*?</script>@siu',
+            '@<object[^>]*?.*?</object>@siu',
+            '@<embed[^>]*?.*?</embed>@siu',
+            '@<applet[^>]*?.*?</applet>@siu',
+            '@<noframes[^>]*?.*?</noframes>@siu',
+            '@<noscript[^>]*?.*?</noscript>@siu',
+            '@<noembed[^>]*?.*?</noembed>@siu',
+            // Add line breaks before and after blocks.
+            '@</?((address)|(blockquote)|(center)|(del))@iu',
+            '@</?((div)|(h[1-9])|(ins)|(isindex)|(p)|(pre))@iu',
+            '@</?((dir)|(dl)|(dt)|(dd)|(li)|(menu)|(ol)|(ul))@iu',
+            '@</?((table)|(th)|(td)|(caption))@iu',
+            '@</?((form)|(button)|(fieldset)|(legend)|(input))@iu',
+            '@</?((label)|(select)|(optgroup)|(option)|(textarea))@iu',
+            '@</?((frameset)|(frame)|(iframe))@iu',
+        ),
+        array(
+            ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+            "\n\$0", "\n\$0", "\n\$0", "\n\$0", "\n\$0", "\n\$0",
+            "\n\$0", "\n\$0",
+        ),
+        $text );
+    return strip_tags($text);
 }
