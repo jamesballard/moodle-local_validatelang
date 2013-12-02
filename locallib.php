@@ -85,7 +85,7 @@ function local_validatelang_sentence_case($str, $lang) {
         $letter = substr($capstr, $x, 1);
         if (in_array($letter, array(".", "!", "?", "~"))) {
             $cap = true;
-        } else if ($letter != " " && $cap == true) {
+        } else if (!in_array($letter, array(" ", "(", "{", "[")) and $cap == true) {
             $letter = strtoupper($letter);
             $cap = false;
         }
